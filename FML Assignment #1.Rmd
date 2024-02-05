@@ -1,0 +1,100 @@
+---
+title: 'FML Assignment #1'
+author: "KAmamba"
+date: "2024-02-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+# The Loan data file that was used for this assignment was downloaded from kaggle via https://www.kaggle.com/datasets/bhavikjikadara/loan-status-prediction/data
+
+# In this Loan Status Prediction dataset, we have the data of applicants who previously applied for loan based on the property that they own which was also acquired via a Property Loan.The bank will decide whether to give a loan to the applicant based on some factors such as Applicant Income, Loan Amount, previous Credit History, Co-applicant Income, etc…
+
+# The meaning of the various columns in the loan_data.csv file are given as follows: Loan_ID: A unique loan ID. Gender: Either male or female. Married: Whether Married(yes) or Not Married(No). Dependents: Number of persons depending on the client. Education: Applicant Education Level (Graduate or Undergraduate). Self_Employed: Self-employed (Yes/No). ApplicantIncome: Applicant income. CoapplicantIncome: Co-applicant income. LoanAmount: Loan amount in thousands. Loan_Amount_Term: Terms of the loan in months. Credit_History: Credit history meets guidelines. Property_Area: Applicants are living either Urban, Semi-Urban or Rural. Loan_Status: Loan approved (Y/N).
+
+# Import the dataset into R
+
+data <- read.csv("C:/Users/kamam/Downloads/MSBA/RStudio/Datasets/loan_data.csv")
+View(data)
+
+# Descriptive Statistics for the Variables
+
+summary(data)
+
+# Quantitative Variables
+
+# Given that 'data' is the data frame, Let 'ApplicantIncome', 'CoapplicantIncome' and 'LoanAmount' be the quantitative variables to be analysed.
+
+# Applicant Income
+mean(data$ApplicantIncome)  # Mean
+median(data$ApplicantIncome)  # Median
+sd(data$ApplicantIncome)  # Standard deviation
+var(data$ApplicantIncome)  # Variance
+min(data$ApplicantIncome)  # Minimum
+max(data$ApplicantIncome)  # Maximum
+
+# Co-applicant Income
+mean(data$CoapplicantIncome)  # Mean
+median(data$CoapplicantIncome)  # Median
+sd(data$CoapplicantIncome)  # Standard deviation
+var(data$CoapplicantIncome)  # Variance
+min(data$CoapplicantIncome)  # Minimum
+max(data$CoapplicantIncome)  # Maximum
+
+# Loan Amount
+mean(data$LoanAmount)  # Mean
+median(data$LoanAmount)  # Median
+sd(data$LoanAmount)  # Standard deviation
+var(data$LoanAmount)  # Variance
+min(data$LoanAmount)  # Minimum
+max(data$LoanAmount)  # Maximum
+
+# Categorical Variables
+
+# Given that 'data' is the data frame, Let 'Gender', 'Married', 'Self_Employed', 'Property_Area' be the categorical variables to be analysed. We can use the table() function to get a frequency table for the categorical variables.
+
+table(data$Gender)
+table(data$Married)
+table(data$Self_Employed)
+table(data$Property_Area)
+
+# Transform at least one variable: Assume that all the loan applicants decided to request double of the initial loan amount
+
+data <- transform(data, New_Loan_Amount = LoanAmount * 2)
+
+# Plotting some quantitative variable and one scatterplot
+
+library(ggplot2) # Load the necessary library
+
+# To plot histogram and boxplot of a quantitative variable 'ApplicantIncome'
+
+ggplot(data, aes(x=ApplicantIncome)) +
+  geom_histogram(binwidth=500, color="black", fill="white") +
+  labs(x="Applicant Income", y="Frequency", title="Histogram of Applicant Income")
+
+ggplot(data, aes(y=ApplicantIncome)) +
+  geom_boxplot() +
+  labs(y="Applicant Income", title="Boxplot of Applicant Income")
+
+# To create a  scatterplot of two quantitative variables 'ApplicantIncome' and 'LoanAmount'
+
+ggplot(data, aes(x=ApplicantIncome, y=LoanAmount)) +
+  geom_point() +
+  labs(x="Applicant Income", y="Loan Amount", title="Scatter plot of Applicant Income vs Loan Amount")
+
+
+```
+
+```{}
+```
