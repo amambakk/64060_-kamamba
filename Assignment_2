@@ -1,1 +1,255 @@
+---
+title: "Universal Bank Assignment Update"
+author: "KAmamba"
+date: "2024-02-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+## The purpose of this assignment is to use k-NN for classification.
+## Universal bank is a young bank growing rapidly in terms of overall customer acquisition. The majority of these customers are liability customers (depositors) with varying sizes of relationship with the bank. The customer base of asset customers (borrowers) is quite small, and the bank is interested in expanding this base rapidly in more loan business. In particular, it wants to explore ways of converting its liability customers to personal loan customers. A campaign that the bank ran last year for liability customers showed a healthy conversion rate of over 9% success. This has encouraged the retail marketing department to devise smarter campaigns with better target marketing. The goal is to use k-NN to predict whether a new customer will accept a loan offer. This will serve as the basis for the design of a new campaign. The file UniversalBank.csv contains data on 5000 customers. The data include customer demographic information (age, income, etc.), the customer’s relationship with the bank (mortgage, securities account, etc.), and the customer response to the last personal loan campaign (Personal Loan). Among these 5000 customers, only 480 (= 9.6%) accepted the personal loan that was offered to them in the earlier campaign. Partition the data into training (60%) and validation (40%) sets.
+
+# Load necessary libraries
+suppressPackageStartupMessages(library(tidyverse))
+library(ISLR)
+library(caret)
+library(dplyr)
+library(class)
+library(fastDummies) # Load the fastDummies package
+
+# Import the dataset into R
+
+UBank <- read.csv("C:/Users/kamam/Downloads/MSBA/RStudio/Datasets/UniversalBank_Data_Assignment.csv")
+
+head(UBank)
+
+str(UBank)
+
+summary(UBank)
+
+# First task is to remove the ID and ZIP.Code columns as they are not relevant for the required prediction
+UBank <- UBank[, -c(1, 5)]
+
+str(UBank) # Verify the removal of the ID and ZIP.Code columns
+
+# Transform the Education variable into dummy variables
+Ubank_dummy <- dummy_cols(UBank, select_columns = "Education")
+
+head(Ubank_dummy, 2) # Check position of main categorical variable "Education" to be removed
+
+UBank <- Ubank_dummy[, -6]  # Removing the 6th column of the data in the set
+head(UBank, 2)                 # Checking the first set of the data in the set
+dim(UBank) # Checking the dimension of the data set
+
+table(UBank$Personal.Loan) # Check the actual values of the current outcome
+
+# Partition the data into training (60%) and validation (40%) sets
+set.seed(133)
+
+
+# Partition the data into Train (3000 data points) and Test (1000 data points)
+train_index <- sample(1:nrow(UBank), nrow(UBank) * 0.6)
+train_data <- UBank[train_index, ]
+test_data <- UBank[-train_index, ]
+
+# Separate the predictors and the response variable
+train_label <- train_data$Personal.Loan
+
+train_data <- train_data %>% select(-Personal.Loan)
+
+validation_label <- test_data$Personal.Loan
+test_data <- test_data %>% select(-Personal.Loan)
+
+head(train_data)
+
+head(test_data)
+
+# Perform k-NN classification with k = 1 using all predictors except Personal.Loan
+
+knn_pred <- knn(train = train_data, test = test_data, cl = train_label, k = 1)
+
+# (1) Create a new test data with the given information below
+
+new_data <- data.frame(Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1, Credit.Card = 1, Education1 = 0, Education2 = 1, Education3 = 0)
+
+# Check the prediction using the new data
+
+predicted_cust <- knn(train = train_data, test = new_data, cl = train_label, k = 1)
+
+# Print the predicted class for the new test data point
+
+predicted_cust  # This code will output the predicted class for the new customer
+
+#   The output is 0. 
+##  How would this customer be classified? It means the model predicts that the customer will not accept the loan offer. 
+##  If the output was 1, it would have meant that the model predicted that the customer would accept the loan offer. 
+
+
+## To normalize the data before modelling
+normalized_model <- preProcess(UBank, method = c('range'))
+
+UBank_normalized <- predict(normalized_model, UBank)
+
+summary(UBank_normalized)
+head(UBank_normalized)
+
+# Use 60% of the data for training and the rest for testing 
+
+Train_index <- createDataPartition(UBank_normalized$Personal.Loan, p = 0.6, list = FALSE)
+
+Trained <- UBank_normalized[Train_index,] # Loads 60% of the data points in the rows for training 
+
+Tested <- UBank_normalized[-Train_index,] # Removes the 60% of the data points in the rows for testing
+
+str(Trained)
+
+str(Tested)
+
+# Separate the predictors and the response variable
+
+Train_Predictors <- Trained %>% select(-Personal.Loan)
+Train_Label <- Trained$Personal.Loan
+
+Test_Predictors <- Tested %>% select(-Personal.Loan)
+Test_Label <- Tested$Personal.Loan
+
+# Let's train the kNN model using the train() function from Caret
+# By setting the random seed, we ensure that the results are reproducible
+
+set.seed(133)
+
+Ubank_model <- train((Personal.Loan ~ Age + Experience + Income + Family + CCAvg + Mortgage + Securities.Account + CD.Account + Online + CreditCard + Education_1 + Education_2 + Education_3), data = UBank_normalized, method = "knn")
+
+Ubank_model
+
+# This model shows that the RMSE = 0.1961498 (least), Rsquared = 0.5702156 (best) MAE = 0.05519522 (least) was used to select the optimal model hyperparameter, k = 5.                  
+
+## (2) Using the search grid to Check for over/under-fit
+
+search_grid <- expand.grid(k = c(1:19))
+
+UB_model_tuned <- train(Personal.Loan ~ Age + Experience + Income + Family + CCAvg + Mortgage + Securities.Account + CD.Account + Online + CreditCard + Education_1 + Education_2 + Education_3, data = UBank_normalized, method = "knn", tuneGrid = search_grid)
+
+UB_model_tuned
+
+# This model has been tuned and now shows that the optimal model hyperparameter that should be used i.e. the best value is k = 4 based on the criterion to  minimise the RMSE value and MAE while optimizing Rsquared that are used for the model. Hence, it may be shown that k = 5 may result in overfitting.
+
+# Given that k = 4 has been selected as the optimal model hyperparameter. We now use the value of k = 4 to Perform the k-NN classification using all predictors except Personal.Loan
+
+
+# To use the knn model to predict/classify where k=4
+Predicted_Test_Labels <- knn(Train_Predictors, Test_Predictors, cl = Train_Label, k = 4)
+
+# Let's take a look at the head of the predicted values
+head(Predicted_Test_Labels)
+
+
+# (3) To create the confusion matrix, we use gmodels
+
+library(gmodels)
+
+CrossTable(x = Test_Label, y = Predicted_Test_Labels, prop.chisq = FALSE)
+
+
+# (4) Classify the customer stored as new_data using the best k.
+
+predicted_cust_k_4 <- knn(train = train_data, test = new_data, cl = train_label, k = 4)
+
+predicted_cust_k_4
+
+## The output of 0 shows that this customer will be classified by the model as a customer that will not accept the loan offer.
+
+#  (5) Repartition the data, this time into training, validation, and test sets (50% : 30% : 20%). Apply the k-NN method with the k chosen above. Compare the confusion matrix of the test set with that of the training and validation sets. Comment on the differences and their reason.
+
+# Read off the normalized data that is still available
+
+Ubank_df <- UBank_normalized
+
+summary(Ubank_df)
+
+head(Ubank_df)
+
+str(Ubank_df)
+
+
+# Create a 50% training set
+train_index <- createDataPartition(Ubank_df$Personal.Loan, p = 0.5, list = FALSE)
+train_set <- Ubank_df[train_index,] # Loads 50% of the data points in the rows for training
+
+# Create a 30% validation set and a 20% test set from the remaining data
+remaining_dataset <- Ubank_df[-train_index,]
+valid_index <- createDataPartition(remaining_dataset$Personal.Loan, p = 0.6, list = FALSE)
+valid_set <- remaining_dataset[valid_index,]
+test_set <- remaining_dataset[-valid_index,]
+
+# Separate the predictors and the class labels for each subset
+train_x_predictors <- train_set %>% select(-Personal.Loan)
+train_y_label <- train_set$Personal.Loan
+
+valid_x_predictors <- valid_set %>% select(-Personal.Loan)
+valid_y_label <- valid_set$Personal.Loan
+
+test_x_predictors <- test_set %>% select(-Personal.Loan)
+test_y_label <- test_set$Personal.Loan
+
+# Given that 'UB_model_tuned' is the trained/tuned model, 'train_x_predictors', 'valid_x_predictors', and 'test_x_predictors' are the data sets while 'actual' is the actual values and 'predicted' are the predicted values from the model, we will now predict using the various sub-data sets:
+
+## Predict the class labels for the train set using the best k
+train_pred <- knn(train = train_x_predictors, test = train_x_predictors, cl = train_y_label, k = 4)
+
+# Let's take a look at the head of the predicted values
+head(train_pred)
+
+# Create confusion matrix for training data
+CrossTable(x = train_y_label, y = train_pred, prop.chisq = FALSE)
+
+# To compare confusion matrix of the test set with the confusion matrix of the validation set
+
+# Predict the class labels for the validation set using the best k and Compute the confusion matrix
+valid_pred <- knn(train_x_predictors, valid_x_predictors, train_y_label, k = 4)
+
+CrossTable(x = valid_y_label, y = valid_pred, prop.chisq = FALSE)
+
+# Predict the class labels for the test set using the best k and Compute the confusion matrix
+test_pred <- knn(train_x_predictors, test_x_predictors, train_y_label, k = 4)
+
+CrossTable(x = test_y_label, y = test_pred, prop.chisq = FALSE)
+
+## The confusion matrices above for the training, validation, and test data sets can be compared in several ways.
+
+# Accuracy; the correct predictions are the values along the main diagonals, which are the true positives (TP) and true negatives (TN). The total number of predictions is the sum of all the values in the matrix, which are the true positives (TP), true negatives (TN), false positives (FP), and false negatives (FN). Therefore, the formula for accuracy is: accuracy=TP+TN/(FP+FN+TP+TN)
+
+# Training data: The accuracy is (2269+144)/2500 = 0.9652 or 96.52%, 
+# Validation data: The accuracy is (1319+85)/1500 = 0.936 or 93.6%, 
+# Test data: The accuracy is (911+48)/1000 = 0.959 or 95.9%
+
+# Sensitivity or Recall: This is the proportion of actual positive cases which are correctly identified. The equation is TP/(TP+FN).
+
+# Training data: The sensitivity is 144/(144+78) = 0.6486 or 64.86%
+# Validation data: The sensitivity is 85/(85+87) = 0.4941 or 49.41%
+# Test data: The sensitivity is 48/(48+38) = 0.5581 or 55.81%
+
+# Specificity: This is the proportion of actual negative cases which are correctly identified. The equation is TN/(FP+TN).
+# Training data: The specificity is 2269/(2269+9) = 0.9961 or 99.61%
+# Validation data: The specificity is 1319/(1319+9) = 0.9932 or 99.32%
+# Test data: The specificity is 911/(911+3) = 0.9967 or 99.67%
+
+##  From these observations, it appears that the model performs well on the training and test data sets with high accuracy, sensitivity, and specificity. However, the performance on the validation data set is slightly lower, particularly in terms of sensitivity. This could suggest that the model may not generalize as well to unseen data and could benefit from further tuning or additional data.
+
+##  Another possible interpretation is that the model is that the model is overfitting on the training and test data sets which may also imply that it is learning some patterns or noise that are specific to the training and test data sets and does not generalize well to new data. This could happen if the validation set is used to tune the model’s hyperparameter. 
+
+
+## The differences between the confusion matrices of the training set, test set and the validation set can be attributed to the randomness of the data partitioning, the variation of the data distribution, and the choice of the hyperparameter k. Since the data is randomly split into three subsets, the results may vary depending on the seed value and the sampling method. The data distribution may also differ across the subsets, as some classes or features may be more or less frequent/impactful in each subset of data
+
+```
 
