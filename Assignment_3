@@ -1,1 +1,155 @@
+---
+title: "Universal Bank - Naive Bayes Classification"
+author: "KAmamba"
+date: "2024-02-26"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+### The file UniversalBank.csv contains data on 5000 customers of Universal Bank. The data include customer demographic information (age, income, etc.), the customer’s relationship with the bank (mortgage, securities aCreditCardount, etc.), and the customer response to the last personal Personal.Loan campaign (Personal Personal.Loan). Among these 5000 customers, only 480 (= 9.6%) accepted the personal Personal.Loan that was offered to them in the earlier campaign. In this exercise, we focus on two predictors: Online (whether or not the customer is an active user of online banking services) and Credit Card (abbreviated CC below) (does the customer hold a credit card issued by the bank), and the outcome Personal Personal.Loan (abbreviated Loan below). 
+ 
+# Load necessary libraries 
+suppressPackageStartupMessages(library(tidyverse))
+library(ISLR)
+library(caret)
+library(dplyr)
+library(reshape2)
+library(class)
+library(naivebayes)
+library(e1071)
+library(melt)
+library(gmodels)
 
+# Load the data
+Ubank_data <- read.csv("C:/Users/kamam/Downloads/MSBA/RStudio/Datasets/UniversalBank_Data_Assignment.csv")
+
+head(Ubank_data)
+
+# Partition the data into training (60%) and validation (40%) sets
+set.seed(135)
+train_ind <- sample(1:nrow(Ubank_data), size = nrow(Ubank_data)*0.6)
+train <- Ubank_data[train_ind, ]
+valid <- Ubank_data[-train_ind, ]
+
+# A. Create a pivot table for the training data with Online as a column variable, CC as a row variable, and Loan as a secondary row variable.
+
+melted_data <- melt(train, id.vars = c("Online", "CreditCard", "Personal.Loan"))
+
+casted_data <- dcast(melted_data,  CreditCard + Personal.Loan ~ Online, value.var = "value", fun.aggregate = length)
+
+print(casted_data)
+
+# Change the column names for ease of identification and reference
+
+colnames(casted_data) <- c("CreditCard", "Loan", "Online_0", "Online_1")
+
+print(casted_data)
+
+# B. Compute the conditional probability: classify a customer who owns a bank credit card and is actively using online banking services.What is the probability that this customer will accept the Personal.Loan offer? [This is the probability of Personal.Loan acceptance (Personal.Loan = 1) conditional on having a bank credit card (CreditCard = 1) and being an active user of online banking services (Online = 1)]
+
+## Here, we are seeking to determine P(Loan = 1 | CreditCard = 1, Online = 1) 
+
+# cond_prob_loan <- casted_data$Online_1[casted_data$CreditCard == 1 & casted_data$Loan == 1] / (casted_data$Online_1[casted_data$CreditCard == 1 & casted_data$Loan == 0] +      casted_data$Online_1[casted_data$CreditCard == 1 & casted_data$Loan == 1])
+
+prob_loan_CCOnline <- casted_data$Online_1[casted_data$CreditCard == 1 & casted_data$Loan == 1] / sum(casted_data$Online_1[casted_data$CreditCard == 1]) # This operation gives the same output as the code above but is simpler 
+  
+print(prob_loan_CCOnline)
+
+# C. Create two separate pivot tables; One will have Personal.Loan (rows) as a function of Online (columns) and the other will have Personal.Loan (rows) as a function of CreditCard.
+
+pivot_online <- dcast(melted_data, Personal.Loan ~ Online, fun.aggregate = length)
+names(pivot_online)[2:3] <- paste("Online", names(pivot_online)[2:3], sep = "_")
+
+print(pivot_online)
+
+
+pivot_CreditCard <- dcast(melted_data, Personal.Loan ~ CreditCard, fun.aggregate = length)
+names(pivot_CreditCard)[2:3] <- paste("CreditCard", names(pivot_CreditCard)[2:3], sep = "_")
+
+print(pivot_CreditCard)
+
+# D. The conditional probabilities required will be computed using [P(A|B) to mean “the probability of A given B”]: 
+
+### This is written mathematically as: P(A|B) = {P(A and B)}/{P(B)} 
+
+# i. P(CreditCard = 1 | Personal.Loan = 1) (the proportion of credit card holders among the Personal.Loan acceptors)
+
+p_CC_Loan_1 <- sum(train$CreditCard == 1 & train$Personal.Loan == 1) / sum(train$Personal.Loan == 1)
+
+p_CC_Loan_1
+
+# ii. P(Online = 1 | Personal.Loan = 1) 
+
+p_online_Loan_1 <- sum(train$Online == 1 & train$Personal.Loan == 1) / sum(train$Personal.Loan == 1)
+
+p_online_Loan_1
+
+# iii. P(Personal.Loan = 1) (the proportion of Personal.Loan acceptors) 
+
+p_Loan_1 <- sum(train$Personal.Loan == 1) / nrow(train)
+
+p_Loan_1
+
+# iv. P(CreditCard = 1 | Personal.Loan = 0) 
+
+p_CC_1_Loan_0 <- sum(train$CreditCard == 1 & train$Personal.Loan == 0) / sum(train$Personal.Loan == 0)
+
+p_CC_1_Loan_0
+
+# v. P(Online = 1 | Personal.Loan = 0)
+
+p_online_1_Loan_0 <- sum(train$Online == 1 & train$Personal.Loan == 0) / sum(train$Personal.Loan == 0)
+
+p_online_1_Loan_0
+
+# vi. P(Personal.Loan = 0)
+
+p_Loan_0 <- sum(train$Personal.Loan == 0) / nrow(train)
+
+p_Loan_0
+
+# E. Compute the naive Bayes probability: Use the quantities computed above to compute the naive Bayes probability P(Personal.Loan = 1 | CreditCard = 1, Online = 1).
+
+p_Loan_1_CC_1_Online_1 <- (p_CC_Loan_1 * p_online_Loan_1 * p_Loan_1) / ((p_CC_Loan_1 * p_online_Loan_1 * p_Loan_1) + (p_CC_1_Loan_0 * p_online_1_Loan_0 * p_Loan_0))
+
+p_Loan_1_CC_1_Online_1
+
+# F. Compare the value obtained above with the one obtained earlier from the pivot table in (B). Which is a more accurate estimate?
+
+print(paste("Naive Bayes Probability: ", p_Loan_1_CC_1_Online_1))
+
+print(paste("Pivot Table Probability: ", prob_loan_CCOnline))
+
+## Here we see that the values are quite close. The Naive Bayes Probability is 8.62% while the Pivot Table Probability is 8.32%. We can argue that the difference between the two numbers are not statistically meaningful or significant
+
+# G. Run naive Bayes on the data. Examine the model output on training data. 
+
+nb_model <- naiveBayes(Personal.Loan ~ CreditCard + Online, data = train)
+
+# printing the model shows the a-priori probabilities and the conditional probabilities of each predictor given each class of the target variable.
+
+print(nb_model)
+
+# The output of the Naive Bayes classifier for discrete predictors can be interpreted as follows:
+
+## A-priori probabilities: These are the probabilities of each class in the target variable Y before considering the effects of the predictor variables. In this case, the probability that Y = 0 is approximately 0.906, and the probability that Y = 1 is approximately 0.094. This suggests that, without considering the impact of CreditCard or Online variables, about 90.6% of the observations are in class 0 and about 9.4% are in class 1.
+## Conditional probabilities: These are the probabilities of each predictor given each class of the target variable. They are calculated separately for each predictor. For CreditCard, the mean (first column) and standard deviation (second column) of CreditCard given Y = 0 are approximately 0.300 and 0.458, respectively. The mean and standard deviation of CreditCard given Y = 1 are approximately 0.279 and 0.449, respectively.
+## For Online, the mean and standard deviation of Online given Y = 0 are approximately 0.594 and 0.491, respectively. The mean and standard deviation of Online given Y = 1 are approximately 0.580 and 0.495, respectively.
+
+## These conditional probabilities are used by the Naive Bayes classifier to make predictions. For a new observation, the classifier calculates the probability of each class given the observation’s predictor values, and assigns the observation to the class with the highest probability
+
+# Find the entry that corresponds to P(Personal.Loan = 1 | CreditCard = 1, Online = 1). And compare this to the number you obtained in (E).
+
+## To determine the entry that corresponds to P(Personal.Loan = 1 | CreditCard = 1, Online = 1), we use the predict function with type = "raw"
+
+newdata <- data.frame(CreditCard = 1, Online = 1)
+
+prob_nb_model <- predict(nb_model, newdata, type = "raw")
+
+prob_nb_model
+
+## The probability that Personal.Loan = 1 given CreditCard = 1 and Online = 1 is 0.08383477 or 8.38%
+
+## By comparison, the Probability that was determined by the Naive Bayes model above is 8.38% while the calculated Naive Bayes Probability obtained in (E) above is 8.62%. The difference between the two numbers may not be statistically meaningful or significant.
