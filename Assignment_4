@@ -1,1 +1,148 @@
 # The purpose of this assignment is to use k-Means for clustering
+
+---
+title: "Clustering Pharmaceutical Industry Using k-Means"
+output:
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+```{r}
+library(knitr)
+suppressPackageStartupMessages(library(tidyverse))
+library(factoextra)
+library(cluster)
+
+# Set seed to ensure that the process is reproducible
+set.seed(312)
+
+# Import the data set into R Studio.
+
+df_pharma <- read.csv("C:/Users/AMAMBA/Downloads/MSBA/RStudio/datasets/Pharmaceuticals.csv")
+
+summary(df_pharma)
+
+```
+```{r}
+# Call head function to inspect the data set.
+
+head(df_pharma)
+
+# Extract the numerical variables from the data set. Thus, we drop columns 1 & 2 as well as columns 12 to 14 which are all categorical variables.
+
+df_pharma_clus <- df_pharma[c(3:11)] # This subsets the numerical variables.
+
+# Call summary function to quickly obtain a statistical summary of the data.
+summary(df_pharma_clus)
+  
+```
+
+```{r}
+## We see a huge variation in the ranges of the variables. It is imperative  to scale the data to ensure the variables are on the same scale. And given that the distance measure is sensitive to scale, we will normalize the variables using the Euclidean distance method.
+
+df_pharma_scaled <- scale(df_pharma_clus)
+
+## The justification for Scaling: it is very important to scale the data because variables measured at different scales do not contribute equally to the analysis and might end up creating a bias.
+
+distance <- get_dist(df_pharma_scaled)
+
+## The image below provides a visual representation of the normalized distance between the 9 numerical variables in the data set. For this visualization we use the fviz_dist function.
+
+fviz_dist(distance)
+
+
+```
+
+
+```{r}
+## The visualization above shows a heatmap that uses a color gradient from red to blue, where red represents lower values and blue represents higher values. The presence of a dark red diagonal line suggests or indicates a strong correlation or a high frequency count in the data set.
+
+
+## Now, we specify k, which is the initial centroid value, or the number of start sets, and specifies how many times an initial solution is generated, and the best clustering outcome.
+
+## We will use the kmeans package with k = 4, and 25 restarts. 
+# The solution will show 4 clusters with centroid values as specified in the output of
+
+pharm_k4 <- kmeans(df_pharma_scaled, centers = 4, nstart = 25)
+
+## The output below shows the centroids for Cluster Analysis. This helps us to analyze the cluster means and understand the characteristics of each cluster
+
+pharm_k4$centers
+
+## The output below shows the size of each cluster
+
+pharm_k4$size
+```
+
+
+```{r}
+## We can now visualize the clusters based on the selected hyperparameter of k=4 using the fviz_cluster function from the factoextra package. This visual representation of the clusters can be helpful for interpretation and validation.
+
+fviz_cluster(pharm_k4,df_pharma_scaled)
+```
+
+```{r}
+# B. Interpret the clusters with respect to the numerical variables used in forming the clusters. 
+
+# The image displays a cluster plot with four distinct clusters, each differentiated by color and shape. This image represents groups of data points based on fitting the scaled values from 9 different features into two dimensions. As seen above, The axes, labeled “Dim1 (42.3%)” and “Dim2 (18.9%),” suggest that these are the principal components or significant dimensions derived from a larger set of data, with their percentages possibly indicating the variance explained by each dimension. The clusters are formed based on the proximity of data points within this two-dimensional space.
+
+# Hence, The dimensions or axes are not easy to define or explain. We can thus say that the fact that a cluster lies in the negative axis does not necessarily connote a loss or failure. And similarly, the fact that a cluster lies in the positive axis does not necessarily connote a win or success. We will need to look into the constituents of the cores or centers used in forming the clusters for more meaning or explanation. However, in the meantime, we try to describe the plot based on the axis numbers. 
+
+## Cluster 1 (Red Circles): This cluster has an interesting boundary of -1.5 to 0.6 on the x-axis and -1 to 1.5 on the y-axis. It includes data points from rows 1, 3, 4, 7, 10, 16, 19, and 21. This suggests that those rows have similar characteristics in the plotted dimensions. 
+
+## Cluster 2 (Green Triangles): This cluster also has an interesting boundary of -3.5 to - 2.2 on the x-axis and -0.8 to 1 on the y-axis. It contains data points from rows 11, 13, 15, and 17. This suggests that those rows have a distinct grouping characteristics in the plotted dimensions. 
+
+## Cluster 3 (Blue Squares): This cluster has a boundary of positive 0.5 to 2.8 on the x-axis and 0.2 to 2.8 on the y-axis. It comprises data points from rows  5, 8, 9, 12, 14, and 20. This suggests that those rows share common traits that set them apart from other clusters in the plotted dimensions.
+
+## Cluster 4 (Purple Crosses): This cluster has a boundary of positive 1.5 to 3.1 on the x-axis and 1.5 to 3.1 on the y-axis. It comprises data points from rows  2, 6, and 18. This suggests that those rows share a cohesive characteristics that differentiated them from other clusters in the plotted dimensions.
+
+
+## Each cluster represents a different segment of the market and these are preliminary interpretations that need further analysis to appropriately classify the market segments.
+
+```
+
+```{r}
+# We now inspect for the right number of clusters using the Elbow method. We use the Elbow Method because this method is used to determine the optimal number of clusters by fitting the model with a range of values for k. The point where the within-cluster sum of squares (WSS) starts to diminish is considered as the right number of clusters.
+
+fviz_nbclust(df_pharma_scaled, kmeans, method = "wss")+
+  geom_vline(xintercept = 4, linetype = 2) + labs(subtitle = "Elbow method")
+
+```
+
+
+```{r}
+# Based on the Elbow Method depicted in the graph in the image above, the optimal number of clusters ( k ) appears to be 4. The optimal number of clusters is where the curve of the within-groups sum of squares starts to bend and becomes less steep, indicating that adding more clusters beyond this point does not significantly improve the variance explained within the data. Therefore, ( k = 4 ) is likely the most suitable choice for clustering the data.
+
+```
+
+
+```{r}
+# C. Is there a pattern in the clusters with respect to the categorical variables (12 to 14)? (those not used in forming the clusters)
+
+## The 14th column, "Exchange", has the following categorical variables: The NYSE (New York Stock Exchange), NASDAQ (National Association of Securities Dealers Automated Quotations), and AMEX (American Stock Exchange is now known as NYSE American). These are all stock exchanges based in the United States. Most of the Exchange data points are listed as NYSE while NASDAQ and AMEX have 1 row of data each. Hence a meaningful association for this categorical variable with respect to the clusters formed from the numerical variables is not possible because any cluster randomly selected will have most of the companies listed in the NYSE.
+
+## Similarly, The 13th column, "Location", has the following categorical variables: US, UK, Canada, Germany, Ireland, France and Switzerland. Similarly, Most of the Location data points are listed as US while UK has 3 data points and each of the remaining locations have 1 row of data respectively. Again, we cannot make a meaningful association or pattern for this categorical variable in connection to the clusters formed from the numerical variables because any cluster randomly selected will have most of the locations listed as the US.
+
+## Finally, The 12th column, "Median_Recommendation", has the following categorical variables: Hold, Buy(Moderate & Strong) and Sell (Moderate). If the clustering were to be done with K-modes for this categorical feature, there would have been three clusters - Hold, Moderate buy and Moderate sell with Strong buy being the outlier. However, we can reckon that an attempt to directly relate or associate or make a meaningful pattern of these 3 categories of the Median_Recommendation  variable with respect to  the four clusters formed by the k-means algorithm from the numerical variables is difficult.
+
+# D.Provide an appropriate name for each cluster using any or all of the variables in the dataset.
+
+# To provide an appropriate name for each cluster, we take into account the variables in the dataset and make further attempts at interpreting the clusters. To do this, we combine information from the k-means cluster centers shown previously and their cluster visualization shown above. We note that the numbers represent the average values of each variable within the respective clusters. We provide an explanation/interpretation of the characteristics of each cluster as follows:
+
+# Cluster 1 can be called STABLE Cluster: This cluster has near-average values for Market_Cap, PE_Ratio, ROE, ROA, and Asset_Turnover, but a significantly lower Beta, suggesting these companies might be less volatile compared to the market. The Net_Profit_Margin is slightly above average, indicating relatively efficient operations.
+
+# Cluster 2 can be called HIGH EFFICIENCY/VALUE Cluster : Companies in this cluster have a high Market_Cap, suggesting they are larger companies. They also have above-average ROE and ROA, indicating strong profitability and asset utilization. The Asset_Turnover is also high, showing efficient use of assets to generate revenue. The Net_Profit_Margin is above average, further confirming financial efficiency.
+
+# Cluster 3 can be called LOW RISK Cluster: This cluster is characterized by companies with a low Market_Cap, high Beta, and below-average PE_Ratio, ROE, ROA, and Asset_Turnover, indicating smaller, riskier companies with lower profitability and efficiency. The Leverage is high, suggesting a higher debt ratio, and the Net_Profit_Margin is below average.
+
+# Cluster 4 can be called HIGH RISK Cluster: Companies in this cluster have a below-average Market_Cap and high PE_Ratio, which could indicate growth stocks or potentially overvalued companies. They have the lowest ROE and ROA, suggesting poor profitability and asset utilization. The Asset_Turnover is effectively zero, indicating no significant asset-based revenue generation. The Net_Profit_Margin is significantly negative, which is concerning and warrants further investigation.
+
+```
